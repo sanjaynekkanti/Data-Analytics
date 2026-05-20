@@ -1,0 +1,442 @@
+
+<h2 class="sr-only">Predictive analytics lab with interactive forecasting using linear regression, exponential smoothing, and moving average models, with accuracy metrics and residual diagnostics</h2>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+.lab{padding:1rem 0;}
+.topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1.25rem;}
+.title-block .t1{font-size:18px;font-weight:500;color:var(--color-text-primary);}
+.title-block .t2{font-size:11px;color:var(--color-text-tertiary);margin-top:2px;}
+.pill-row{display:flex;gap:6px;flex-wrap:wrap;}
+.pill{font-size:12px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-secondary);cursor:pointer;transition:all .15s;}
+.pill.active{background:var(--color-background-secondary);color:var(--color-text-primary);border-color:var(--color-border-primary);}
+.ctrl-btn{font-size:12px;padding:5px 12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-secondary);cursor:pointer;}
+.ctrl-btn:hover{background:var(--color-background-secondary);color:var(--color-text-primary);}
+.kpi-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px;}
+.kpi{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px 14px;}
+.kpi-lbl{font-size:11px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;}
+.kpi-val{font-size:20px;font-weight:500;color:var(--color-text-primary);}
+.kpi-sub{font-size:11px;color:var(--color-text-tertiary);margin-top:3px;}
+.good{color:#059669;}.warn{color:#D97706;}.bad{color:#DC2626;}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:16px;}
+.card-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:8px;}
+.card-title{font-size:13px;font-weight:500;color:var(--color-text-primary);}
+.card-sub{font-size:11px;color:var(--color-text-tertiary);margin-top:2px;}
+.main-chart-wrap{position:relative;width:100%;height:280px;}
+.bottom-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px;}
+.slider-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.slider-label{font-size:12px;color:var(--color-text-secondary);width:110px;flex-shrink:0;}
+.slider-val{font-size:12px;font-weight:500;color:var(--color-text-primary);width:36px;text-align:right;}
+.legend-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--color-text-secondary);}
+.leg-line{width:18px;height:2px;flex-shrink:0;}
+.leg-dash{width:18px;height:0;border-top:2px dashed;flex-shrink:0;}
+.resid-wrap{position:relative;width:100%;height:130px;}
+.dist-wrap{position:relative;width:100%;height:130px;}
+.feat-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.feat-lbl{font-size:11px;color:var(--color-text-secondary);width:90px;flex-shrink:0;}
+.feat-bar-bg{flex:1;background:var(--color-background-secondary);border-radius:3px;height:16px;overflow:hidden;}
+.feat-bar{height:100%;border-radius:3px;display:flex;align-items:center;justify-content:flex-end;padding-right:5px;font-size:10px;font-weight:500;color:#fff;}
+.step-row{display:flex;gap:0;margin-top:4px;}
+.step{flex:1;padding:8px 6px;border-right:0.5px solid var(--color-border-tertiary);text-align:center;}
+.step:last-child{border-right:none;}
+.step-icon{font-size:16px;color:var(--color-text-tertiary);margin-bottom:4px;}
+.step-name{font-size:10px;color:var(--color-text-secondary);line-height:1.3;}
+.step-status{font-size:10px;margin-top:3px;}
+.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:8px;font-weight:500;}
+.badge-ok{background:#D1FAE5;color:#065F46;}
+.badge-run{background:#DBEAFE;color:#1E40AF;}
+.badge-warn{background:#FEF3C7;color:#78350F;}
+@media(max-width:560px){.kpi-row{grid-template-columns:repeat(2,1fr);}.bottom-grid{grid-template-columns:1fr;}}
+</style>
+
+<div class="lab">
+  <div class="topbar">
+    <div class="title-block">
+      <div class="t1"><i class="ti ti-brain" aria-hidden="true" style="font-size:16px;vertical-align:-2px;margin-right:6px;"></i>Predictive analytics lab</div>
+      <div class="t2">Historical dataset · 48 months · 3 models · live tuning</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <select id="datasetSel" style="font-size:12px;padding:5px 10px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-secondary);cursor:pointer;" onchange="switchDataset()">
+        <option value="revenue">Monthly revenue</option>
+        <option value="demand">Product demand</option>
+        <option value="users">User growth</option>
+      </select>
+      <button class="ctrl-btn" onclick="sendPrompt('Explain which predictive model is best for my data and why, based on the accuracy metrics shown ↗')">Interpret ↗</button>
+    </div>
+  </div>
+
+  <div class="pill-row" style="margin-bottom:1rem;">
+    <span class="pill active" id="pill-linear" onclick="setModel('linear',this)"><i class="ti ti-trending-up" aria-hidden="true" style="font-size:12px;margin-right:4px;"></i>Linear regression</span>
+    <span class="pill" id="pill-exp" onclick="setModel('exp',this)"><i class="ti ti-wave-sine" aria-hidden="true" style="font-size:12px;margin-right:4px;"></i>Exp. smoothing</span>
+    <span class="pill" id="pill-ma" onclick="setModel('ma',this)"><i class="ti ti-activity" aria-hidden="true" style="font-size:12px;margin-right:4px;"></i>Moving average</span>
+  </div>
+
+  <div class="kpi-row" id="kpiRow"></div>
+
+  <div class="card" style="margin-bottom:12px;">
+    <div class="card-hd">
+      <div>
+        <div class="card-title" id="mainTitle">Forecast — linear regression</div>
+        <div class="card-sub" id="mainSub">Historical (blue) · Fitted (teal) · Forecast 12 months (dashed)</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <label style="font-size:11px;color:var(--color-text-tertiary);">Horizon</label>
+        <input type="range" min="3" max="24" value="12" step="1" id="horizonSlider" style="width:80px;" oninput="updateHorizon(this.value)">
+        <span style="font-size:12px;font-weight:500;color:var(--color-text-primary);min-width:28px;" id="horizonVal">12mo</span>
+      </div>
+    </div>
+    <div class="legend-row">
+      <div class="leg"><span class="leg-line" style="background:#378ADD;"></span>Historical</div>
+      <div class="leg"><span class="leg-line" style="background:#1D9E75;"></span>Fitted</div>
+      <div class="leg"><span class="leg-dash" style="border-color:#1D9E75;"></span>Forecast</div>
+      <div class="leg"><span style="width:18px;height:10px;background:rgba(29,158,117,0.12);border-radius:2px;flex-shrink:0;"></span>Confidence band</div>
+    </div>
+    <div class="main-chart-wrap">
+      <canvas id="mainChart" role="img" aria-label="Time series chart showing historical data, fitted model, and 12-month forecast with confidence interval">Historical monthly data, model fit, and forecast projection with confidence bands.</canvas>
+    </div>
+  </div>
+
+  <div class="bottom-grid">
+    <div class="card">
+      <div class="card-hd"><div><div class="card-title">Model tuning</div><div class="card-sub" id="tuneSub">Adjust parameters</div></div></div>
+      <div id="tuneControls"></div>
+      <div style="margin-top:12px;border-top:0.5px solid var(--color-border-tertiary);padding-top:10px;">
+        <div class="card-sub" style="margin-bottom:8px;">Pipeline steps</div>
+        <div class="step-row">
+          <div class="step"><div class="step-icon"><i class="ti ti-database" aria-hidden="true"></i></div><div class="step-name">Ingest</div><div class="step-status"><span class="badge badge-ok">Done</span></div></div>
+          <div class="step"><div class="step-icon"><i class="ti ti-filter" aria-hidden="true"></i></div><div class="step-name">Clean</div><div class="step-status"><span class="badge badge-ok">Done</span></div></div>
+          <div class="step"><div class="step-icon"><i class="ti ti-adjustments" aria-hidden="true"></i></div><div class="step-name">Fit</div><div class="step-status"><span class="badge badge-run" id="fitBadge">Active</span></div></div>
+          <div class="step"><div class="step-icon"><i class="ti ti-check" aria-hidden="true"></i></div><div class="step-name">Evaluate</div><div class="step-status"><span class="badge badge-ok">Done</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd"><div><div class="card-title">Residual diagnostics</div><div class="card-sub">Error distribution & autocorrelation</div></div></div>
+      <div class="resid-wrap" style="margin-bottom:8px;">
+        <canvas id="residChart" role="img" aria-label="Residual plot showing model prediction errors over time">Residuals (errors) plotted over time to check for patterns.</canvas>
+      </div>
+      <div class="dist-wrap">
+        <canvas id="distChart" role="img" aria-label="Histogram of residuals showing error distribution">Distribution of prediction errors.</canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div><div class="card-title">Feature importance</div><div class="card-sub">Predictor contribution</div></div>
+        <button class="ctrl-btn" onclick="sendPrompt('How can I improve the model accuracy and which additional features should I engineer? ↗')">Improve ↗</button>
+      </div>
+      <div id="featBars"></div>
+      <div style="margin-top:14px;border-top:0.5px solid var(--color-border-tertiary);padding-top:10px;">
+        <div class="card-sub" style="margin-bottom:8px;">Model comparison</div>
+        <div id="modelComp"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const TICK = '#888780';
+const GRID = 'rgba(136,135,128,0.12)';
+
+const DATASETS = {
+  revenue:{
+    label:'Revenue ($K)',
+    history:[142,155,138,167,181,196,188,204,219,232,218,248,261,274,259,288,303,318,307,334,349,362,345,381,398,412,394,428,447,463,449,487,508,521,502,543,564,578,559,601,623,638,617,662,685,699,678,724],
+    unit:'$K',yPrefix:'$',
+    features:[{name:'Seasonality',val:82,col:'#1D9E75'},{name:'Trend',val:74,col:'#378ADD'},{name:'Lag-1',val:61,col:'#534AB7'},{name:'Promo events',val:48,col:'#EF9F27'},{name:'Econ index',val:32,col:'#D4537E'}],
+  },
+  demand:{
+    label:'Units sold',
+    history:[3820,4105,3760,4340,4810,5120,4890,5380,5720,6010,5640,6280,6590,6920,6540,7180,7560,7890,7440,8120,8490,8830,8340,9010,9420,9780,9260,9940,10380,10750,10190,10920,11380,11720,11120,11890,12340,12690,12040,12820,13290,13640,12980,13780,14240,14590,13920,14710],
+    unit:'units',yPrefix:'',
+    features:[{name:'Lag-1',val:88,col:'#378ADD'},{name:'Seasonality',val:71,col:'#1D9E75'},{name:'Price',val:63,col:'#534AB7'},{name:'Marketing',val:55,col:'#EF9F27'},{name:'Competitor',val:29,col:'#D4537E'}],
+  },
+  users:{
+    label:'Active users (K)',
+    history:[12,14,13,16,19,22,21,25,29,33,31,37,42,47,44,52,58,65,61,70,79,88,83,95,106,118,112,127,141,157,149,168,186,207,196,220,244,271,257,286,318,352,334,371,412,457,433,481],
+    unit:'K users',yPrefix:'',
+    features:[{name:'Viral coeff',val:91,col:'#1D9E75'},{name:'Trend',val:79,col:'#378ADD'},{name:'Retention',val:67,col:'#534AB7'},{name:'Channels',val:52,col:'#EF9F27'},{name:'Churn rate',val:41,col:'#D4537E'}],
+  }
+};
+
+let model = 'linear';
+let horizon = 12;
+let dataset = 'revenue';
+let alpha = 0.3;
+let maWindow = 4;
+let mainChart, residChart, distChart;
+
+function getDS(){ return DATASETS[dataset]; }
+
+function linReg(data){
+  const n=data.length, sx=data.reduce((_,__,i)=>_+i,0), sy=data.reduce((a,v)=>a+v,0);
+  const sx2=data.reduce((_,__,i)=>_+i*i,0), sxy=data.reduce((a,v,i)=>a+i*v,0);
+  const slope=(n*sxy-sx*sy)/(n*sx2-sx*sx);
+  const intercept=(sy-slope*sx)/n;
+  return {slope,intercept,fitted:data.map((_,i)=>intercept+slope*i),predict:t=>intercept+slope*t};
+}
+
+function expSmooth(data,a){
+  const f=[data[0]];
+  for(let i=1;i<data.length;i++) f.push(a*data[i-1]+(1-a)*f[i-1]);
+  const last=f[f.length-1], trend=last-f[f.length-2];
+  return {fitted:f, predict:h=>last+trend*h};
+}
+
+function movingAvg(data,w){
+  const f=data.map((_,i)=>{
+    if(i<w-1) return null;
+    return data.slice(i-w+1,i+1).reduce((a,v)=>a+v,0)/w;
+  });
+  const vals=f.filter(v=>v!==null), trend=(vals[vals.length-1]-vals[vals.length-2]);
+  const last=vals[vals.length-1];
+  return {fitted:f, predict:h=>last+trend*h};
+}
+
+function getFit(){
+  const d=getDS().history;
+  if(model==='linear') return linReg(d);
+  if(model==='exp') return expSmooth(d,alpha);
+  return movingAvg(d,maWindow);
+}
+
+function calcMetrics(actual,fitted){
+  const pairs=actual.map((a,i)=>({a,f:fitted[i]})).filter(p=>p.f!==null);
+  const n=pairs.length;
+  const mae=pairs.reduce((s,p)=>s+Math.abs(p.a-p.f),0)/n;
+  const rmse=Math.sqrt(pairs.reduce((s,p)=>s+(p.a-p.f)**2,0)/n);
+  const meanA=pairs.reduce((s,p)=>s+p.a,0)/n;
+  const ss_res=pairs.reduce((s,p)=>s+(p.a-p.f)**2,0);
+  const ss_tot=pairs.reduce((s,p)=>s+(p.a-meanA)**2,0);
+  const r2=1-ss_res/ss_tot;
+  const mape=pairs.reduce((s,p)=>s+Math.abs((p.a-p.f)/p.a),0)/n*100;
+  return {mae,rmse,r2,mape};
+}
+
+function residuals(actual,fitted){
+  return actual.map((a,i)=>fitted[i]!==null?a-fitted[i]:null).filter(v=>v!==null);
+}
+
+function buildLabels(){
+  const base=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const years=[2021,2022,2023,2024];
+  const hist=[];
+  years.forEach(y=>base.forEach(m=>hist.push(m+" '"+String(y).slice(2))));
+  return hist.slice(0,48);
+}
+
+function buildForecastLabels(h){
+  const base=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const labels=[];
+  for(let i=0;i<h;i++) labels.push(base[i%12]+" '2"+(5+Math.floor((i+0)/12)));
+  return labels;
+}
+
+function renderKPIs(){
+  const fit=getFit(); const d=getDS();
+  const m=calcMetrics(d.history,fit.fitted);
+  const ds=d; const lastVal=d.history[d.history.length-1];
+  const forecastEnd=fit.predict(d.history.length+horizon-1);
+  const growth=((forecastEnd-lastVal)/lastVal*100).toFixed(1);
+  const r2cls=m.r2>0.9?'good':m.r2>0.75?'warn':'bad';
+  const mapeClass=m.mape<5?'good':m.mape<12?'warn':'bad';
+  document.getElementById('kpiRow').innerHTML=`
+    <div class="kpi"><div class="kpi-lbl">R² score</div><div class="kpi-val ${r2cls}">${m.r2.toFixed(3)}</div><div class="kpi-sub">${m.r2>0.9?'Excellent fit':m.r2>0.75?'Good fit':'Weak fit'}</div></div>
+    <div class="kpi"><div class="kpi-lbl">MAPE</div><div class="kpi-val ${mapeClass}">${m.mape.toFixed(1)}%</div><div class="kpi-sub">Mean abs % error</div></div>
+    <div class="kpi"><div class="kpi-lbl">RMSE</div><div class="kpi-val">${Math.round(m.rmse).toLocaleString()}</div><div class="kpi-sub">${d.unit}</div></div>
+    <div class="kpi"><div class="kpi-lbl">${horizon}mo forecast growth</div><div class="kpi-val ${parseFloat(growth)>0?'good':'bad'}">${growth>0?'+':''}${growth}%</div><div class="kpi-sub">vs. current value</div></div>`;
+}
+
+function updateMainChart(){
+  const d=getDS(); const fit=getFit();
+  const histLabels=buildLabels();
+  const forecastLabels=buildForecastLabels(horizon);
+  const allLabels=[...histLabels,...forecastLabels];
+  const n=d.history.length;
+
+  const forecastPts=[];
+  for(let h=1;h<=horizon;h++) forecastPts.push(fit.predict(n-1+h));
+
+  const sigma=Math.sqrt(calcMetrics(d.history,fit.fitted).rmse);
+  const confUp=forecastPts.map((v,i)=>v+sigma*(1+i*0.15));
+  const confDn=forecastPts.map((v,i)=>v-sigma*(1+i*0.15));
+
+  const histData=d.history.map((v,i)=>({x:histLabels[i],y:v}));
+  const fittedData=fit.fitted.map((v,i)=>v!==null?{x:histLabels[i],y:Math.round(v)}:null).filter(Boolean);
+  const forecastData=forecastPts.map((v,i)=>({x:forecastLabels[i],y:Math.round(v)}));
+  const confUpData=confUp.map((v,i)=>({x:forecastLabels[i],y:Math.round(v)}));
+  const confDnData=confDn.map((v,i)=>({x:forecastLabels[i],y:Math.round(v)}));
+
+  const skipEvery=Math.ceil(allLabels.length/10);
+
+  if(mainChart){
+    mainChart.data.labels=allLabels;
+    mainChart.data.datasets[0].data=histData;
+    mainChart.data.datasets[1].data=fittedData;
+    mainChart.data.datasets[2].data=forecastData;
+    mainChart.data.datasets[3].data=confUpData;
+    mainChart.data.datasets[4].data=confDnData;
+    mainChart.options.scales.x.ticks.callback=function(_,i){return i%skipEvery===0?allLabels[i]:'';}
+    mainChart.update();
+  } else {
+    mainChart=new Chart(document.getElementById('mainChart'),{
+      type:'line',
+      data:{
+        labels:allLabels,
+        datasets:[
+          {label:'Historical',data:histData,borderColor:'#378ADD',backgroundColor:'transparent',borderWidth:2,pointRadius:0,tension:0.3,parsing:{xAxisKey:'x',yAxisKey:'y'}},
+          {label:'Fitted',data:fittedData,borderColor:'#1D9E75',backgroundColor:'transparent',borderWidth:1.5,pointRadius:0,tension:0.3,parsing:{xAxisKey:'x',yAxisKey:'y'}},
+          {label:'Forecast',data:forecastData,borderColor:'#1D9E75',borderDash:[6,4],backgroundColor:'transparent',borderWidth:2,pointRadius:3,pointBackgroundColor:'#1D9E75',tension:0.3,parsing:{xAxisKey:'x',yAxisKey:'y'}},
+          {label:'Conf upper',data:confUpData,borderColor:'transparent',backgroundColor:'rgba(29,158,117,0.10)',borderWidth:0,fill:'+1',pointRadius:0,parsing:{xAxisKey:'x',yAxisKey:'y'}},
+          {label:'Conf lower',data:confDnData,borderColor:'transparent',backgroundColor:'rgba(29,158,117,0.10)',borderWidth:0,fill:false,pointRadius:0,parsing:{xAxisKey:'x',yAxisKey:'y'}},
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${Math.round(ctx.raw.y).toLocaleString()}`}}},
+        scales:{
+          x:{grid:{color:GRID},ticks:{color:TICK,font:{size:10},maxRotation:0,callback:function(_,i){return i%skipEvery===0?allLabels[i]:'';},autoSkip:false}},
+          y:{grid:{color:GRID},ticks:{color:TICK,font:{size:11},callback:v=>getDS().yPrefix+(v>=1000?(v/1000).toFixed(0)+'K':v)},beginAtZero:false}
+        }
+      }
+    });
+  }
+}
+
+function updateResidCharts(){
+  const fit=getFit(); const d=getDS();
+  const res=residuals(d.history,fit.fitted);
+  const histLabels=buildLabels().slice(res.length>48?0:48-res.length);
+
+  if(residChart){
+    residChart.data.labels=histLabels.slice(0,res.length);
+    residChart.data.datasets[0].data=res.map(v=>Math.round(v));
+    residChart.update();
+  } else {
+    residChart=new Chart(document.getElementById('residChart'),{
+      type:'bar',
+      data:{
+        labels:histLabels.slice(0,res.length),
+        datasets:[{label:'Residual',data:res.map(v=>Math.round(v)),backgroundColor:res.map(v=>v>=0?'rgba(29,158,117,0.6)':'rgba(216,90,48,0.6)'),borderRadius:2,borderSkipped:false}]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'Error: '+Math.round(ctx.raw).toLocaleString()}}},
+        scales:{
+          x:{display:false},
+          y:{grid:{color:GRID},ticks:{color:TICK,font:{size:10},callback:v=>Math.round(v)},title:{display:true,text:'Error',color:TICK,font:{size:10}}}
+        }
+      }
+    });
+  }
+
+  const bins=10; const minR=Math.min(...res), maxR=Math.max(...res);
+  const step=(maxR-minR)/bins;
+  const counts=Array(bins).fill(0);
+  const binLabels=Array.from({length:bins},(_,i)=>Math.round(minR+step*i));
+  res.forEach(v=>{const b=Math.min(bins-1,Math.floor((v-minR)/step));counts[b]++;});
+
+  if(distChart){
+    distChart.data.labels=binLabels;
+    distChart.data.datasets[0].data=counts;
+    distChart.update();
+  } else {
+    distChart=new Chart(document.getElementById('distChart'),{
+      type:'bar',
+      data:{labels:binLabels,datasets:[{label:'Count',data:counts,backgroundColor:'rgba(83,74,183,0.6)',borderRadius:2,borderSkipped:false}]},
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'Count: '+ctx.raw}}},
+        scales:{
+          x:{grid:{display:false},ticks:{color:TICK,font:{size:9},maxRotation:0,callback:v=>Math.round(v)}},
+          y:{grid:{color:GRID},ticks:{color:TICK,font:{size:10}},title:{display:true,text:'Freq',color:TICK,font:{size:10}}}
+        }
+      }
+    });
+  }
+}
+
+function renderFeatures(){
+  const feats=getDS().features;
+  document.getElementById('featBars').innerHTML=feats.map(f=>`
+    <div class="feat-row">
+      <div class="feat-lbl">${f.name}</div>
+      <div class="feat-bar-bg"><div class="feat-bar" style="width:${f.val}%;background:${f.col};">${f.val}%</div></div>
+    </div>`).join('');
+
+  const models=['Linear reg','Exp smooth','Moving avg'];
+  const scores={revenue:[0.961,0.944,0.918],demand:[0.978,0.952,0.931],users:[0.989,0.971,0.947]};
+  const s=scores[dataset];
+  document.getElementById('modelComp').innerHTML=models.map((m,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <span style="font-size:11px;color:var(--color-text-secondary);width:80px;flex-shrink:0;">${m}</span>
+      <div style="flex:1;background:var(--color-background-secondary);border-radius:3px;height:14px;overflow:hidden;">
+        <div style="height:100%;width:${s[i]*100}%;background:${i===0?'#378ADD':i===1?'#1D9E75':'#888780'};border-radius:3px;"></div>
+      </div>
+      <span style="font-size:11px;font-weight:500;color:var(--color-text-primary);width:38px;text-align:right;">${s[i].toFixed(3)}</span>
+    </div>`).join('');
+}
+
+function renderTuneControls(){
+  const names={linear:'Linear regression',exp:'Exponential smoothing',ma:'Moving average'};
+  document.getElementById('tuneSub').textContent=names[model]+' parameters';
+  if(model==='linear'){
+    const fit=getFit();
+    document.getElementById('tuneControls').innerHTML=`
+      <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px;">Ordinary least squares — no hyperparameters.</div>
+      <div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px;font-size:12px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="color:var(--color-text-tertiary);">Slope (β₁)</span><span style="font-weight:500;color:var(--color-text-primary);">${fit.slope.toFixed(3)}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-tertiary);">Intercept (β₀)</span><span style="font-weight:500;color:var(--color-text-primary);">${Math.round(fit.intercept).toLocaleString()}</span></div>
+      </div>`;
+  } else if(model==='exp'){
+    document.getElementById('tuneControls').innerHTML=`
+      <div class="slider-row">
+        <span class="slider-label">Alpha (α)</span>
+        <input type="range" min="1" max="9" value="${Math.round(alpha*10)}" step="1" style="flex:1;" oninput="alpha=this.value/10;document.getElementById('alphaVal').textContent=alpha.toFixed(1);renderAll();">
+        <span class="slider-val" id="alphaVal">${alpha.toFixed(1)}</span>
+      </div>
+      <div style="font-size:11px;color:var(--color-text-tertiary);line-height:1.5;">Higher α = more weight on recent data. Lower α = smoother, longer memory.</div>`;
+  } else {
+    document.getElementById('tuneControls').innerHTML=`
+      <div class="slider-row">
+        <span class="slider-label">Window size</span>
+        <input type="range" min="2" max="12" value="${maWindow}" step="1" style="flex:1;" oninput="maWindow=parseInt(this.value);document.getElementById('maVal').textContent=this.value+'mo';renderAll();">
+        <span class="slider-val" id="maVal">${maWindow}mo</span>
+      </div>
+      <div style="font-size:11px;color:var(--color-text-tertiary);line-height:1.5;">Larger window = smoother trend, more lag. Smaller = reactive, more noise.</div>`;
+  }
+}
+
+function renderAll(){
+  renderKPIs();
+  updateMainChart();
+  updateResidCharts();
+  renderFeatures();
+  renderTuneControls();
+  const names={linear:'Forecast — linear regression',exp:'Forecast — exponential smoothing',ma:'Forecast — moving average'};
+  document.getElementById('mainTitle').textContent=names[model];
+}
+
+function setModel(m,el){
+  model=m;
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  renderAll();
+}
+
+function updateHorizon(v){
+  horizon=parseInt(v);
+  document.getElementById('horizonVal').textContent=v+'mo';
+  renderKPIs();
+  updateMainChart();
+}
+
+function switchDataset(){
+  dataset=document.getElementById('datasetSel').value;
+  renderAll();
+}
+
+setTimeout(renderAll,120);
+</script>

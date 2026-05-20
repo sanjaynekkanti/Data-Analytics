@@ -1,0 +1,432 @@
+
+<h2 class="sr-only">Sales and Revenue Analysis Dashboard with KPIs, charts, filters, and product performance data</h2>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+.dash { padding: 1rem 0; }
+.topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 12px; }
+.topbar-left { display: flex; align-items: center; gap: 10px; }
+.badge-overdue { background: #FEE2E2; color: #7F1D1D; font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 4px; border: 0.5px solid #F09595; }
+.dash-title { font-size: 18px; font-weight: 500; color: var(--color-text-primary); }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.ctrl-btn { font-size: 12px; padding: 5px 12px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-secondary); cursor: pointer; transition: background 0.15s; }
+.ctrl-btn.active, .ctrl-btn:hover { background: var(--color-background-secondary); color: var(--color-text-primary); }
+.ctrl-select { font-size: 12px; padding: 5px 10px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-secondary); cursor: pointer; }
+.kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
+.kpi { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 14px 16px; position: relative; overflow: hidden; }
+.kpi-label { font-size: 11px; color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+.kpi-value { font-size: 22px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 4px; }
+.kpi-delta { font-size: 12px; display: flex; align-items: center; gap: 4px; }
+.delta-up { color: #059669; }
+.delta-dn { color: #DC2626; }
+.kpi-icon { position: absolute; right: 14px; top: 14px; font-size: 18px; color: var(--color-text-tertiary); opacity: 0.5; }
+.charts-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 12px; margin-bottom: 12px; }
+.chart-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 16px; }
+.chart-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.chart-title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+.chart-sub { font-size: 11px; color: var(--color-text-tertiary); margin-top: 2px; }
+.seg-btns { display: flex; gap: 4px; }
+.seg-btn { font-size: 11px; padding: 3px 8px; border-radius: 4px; border: 0.5px solid var(--color-border-tertiary); background: transparent; color: var(--color-text-tertiary); cursor: pointer; }
+.seg-btn.active { background: var(--color-background-secondary); color: var(--color-text-primary); border-color: var(--color-border-secondary); }
+.bottom-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.legend-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; font-size: 11px; color: var(--color-text-secondary); }
+.leg-item { display: flex; align-items: center; gap: 5px; }
+.leg-sq { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th { font-size: 11px; font-weight: 500; color: var(--color-text-tertiary); text-align: left; padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; user-select: none; }
+th:hover { color: var(--color-text-primary); }
+td { padding: 7px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); color: var(--color-text-primary); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--color-background-secondary); }
+.pill { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 500; }
+.pill-up { background: #D1FAE5; color: #065F46; }
+.pill-dn { background: #FEE2E2; color: #7F1D1D; }
+.pill-mid { background: #FEF3C7; color: #78350F; }
+.bar-mini { height: 5px; border-radius: 2px; background: #378ADD; display: inline-block; }
+.upload-zone { border: 1.5px dashed var(--color-border-secondary); border-radius: var(--border-radius-lg); padding: 20px; text-align: center; cursor: pointer; background: var(--color-background-secondary); transition: background 0.15s; }
+.upload-zone:hover { background: var(--color-background-tertiary); }
+.upload-icon { font-size: 28px; color: var(--color-text-tertiary); margin-bottom: 8px; }
+.upload-text { font-size: 13px; color: var(--color-text-secondary); }
+.upload-sub { font-size: 11px; color: var(--color-text-tertiary); margin-top: 4px; }
+.import-btns { display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+.import-btn { font-size: 11px; padding: 4px 10px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-secondary); cursor: pointer; display: flex; align-items: center; gap: 5px; }
+.import-btn:hover { background: var(--color-background-secondary); }
+.funnel-item { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.funnel-label { font-size: 12px; color: var(--color-text-secondary); width: 80px; flex-shrink: 0; text-align: right; }
+.funnel-bar-wrap { flex: 1; background: var(--color-background-secondary); border-radius: 3px; height: 22px; overflow: hidden; }
+.funnel-bar { height: 100%; border-radius: 3px; display: flex; align-items: center; padding-left: 8px; font-size: 11px; font-weight: 500; transition: width 0.6s ease; }
+.funnel-val { font-size: 11px; color: var(--color-text-tertiary); width: 48px; text-align: right; flex-shrink: 0; }
+@media (max-width: 560px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .charts-row, .bottom-row { grid-template-columns: 1fr; }
+}
+</style>
+
+<div class="dash">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="dash-title"><i class="ti ti-chart-bar" aria-hidden="true" style="font-size:16px; vertical-align:-2px; margin-right:6px;"></i>Sales & Revenue</span>
+      <span class="badge-overdue"><i class="ti ti-alert-circle" aria-hidden="true" style="font-size:10px; vertical-align:-1px; margin-right:3px;"></i>Overdue 11d</span>
+    </div>
+    <div class="controls">
+      <select class="ctrl-select" id="regionSel" onchange="applyFilters()">
+        <option value="all">All regions</option>
+        <option value="north">North</option>
+        <option value="south">South</option>
+        <option value="east">East</option>
+        <option value="west">West</option>
+      </select>
+      <select class="ctrl-select" id="catSel" onchange="applyFilters()">
+        <option value="all">All categories</option>
+        <option value="electronics">Electronics</option>
+        <option value="apparel">Apparel</option>
+        <option value="home">Home</option>
+        <option value="health">Health</option>
+      </select>
+      <button class="ctrl-btn active" id="btnQ1" onclick="setPeriod('Q1')">Q1</button>
+      <button class="ctrl-btn" id="btnQ2" onclick="setPeriod('Q2')">Q2</button>
+      <button class="ctrl-btn" id="btnQ3" onclick="setPeriod('Q3')">Q3</button>
+      <button class="ctrl-btn" id="btnQ4" onclick="setPeriod('Q4')">Q4</button>
+      <button class="ctrl-btn" id="btnAll" onclick="setPeriod('All')">Full year</button>
+      <button class="ctrl-btn" onclick="sendPrompt('Generate a written summary of key insights from the sales dashboard')"><i class="ti ti-sparkles" aria-hidden="true"></i> Insights ↗</button>
+    </div>
+  </div>
+
+  <div class="kpi-grid" id="kpiGrid">
+    <div class="kpi"><i class="ti ti-currency-dollar kpi-icon" aria-hidden="true"></i><div class="kpi-label">Total Revenue</div><div class="kpi-value" id="kv-rev">$4.28M</div><div class="kpi-delta delta-up"><i class="ti ti-trending-up" aria-hidden="true"></i><span>+12.4% vs prior period</span></div></div>
+    <div class="kpi"><i class="ti ti-shopping-cart kpi-icon" aria-hidden="true"></i><div class="kpi-label">Total Orders</div><div class="kpi-value" id="kv-ord">18,342</div><div class="kpi-delta delta-up"><i class="ti ti-trending-up" aria-hidden="true"></i><span>+8.7% vs prior period</span></div></div>
+    <div class="kpi"><i class="ti ti-users kpi-icon" aria-hidden="true"></i><div class="kpi-label">Avg Order Value</div><div class="kpi-value" id="kv-aov">$233</div><div class="kpi-delta delta-up"><i class="ti ti-trending-up" aria-hidden="true"></i><span>+3.4% vs prior period</span></div></div>
+    <div class="kpi"><i class="ti ti-chart-pie kpi-icon" aria-hidden="true"></i><div class="kpi-label">Gross Margin</div><div class="kpi-value" id="kv-mgn">38.2%</div><div class="kpi-delta delta-dn"><i class="ti ti-trending-down" aria-hidden="true"></i><span>-1.1pp vs prior period</span></div></div>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-hd">
+        <div>
+          <div class="chart-title">Revenue trend</div>
+          <div class="chart-sub" id="trendSub">Monthly, Jan–Dec 2024</div>
+        </div>
+        <div class="seg-btns">
+          <button class="seg-btn active" onclick="setTrendView('rev', this)">Revenue</button>
+          <button class="seg-btn" onclick="setTrendView('ord', this)">Orders</button>
+          <button class="seg-btn" onclick="setTrendView('aov', this)">AOV</button>
+        </div>
+      </div>
+      <div class="legend-row">
+        <div class="leg-item"><span class="leg-sq" style="background:#378ADD;"></span>2024</div>
+        <div class="leg-item"><span class="leg-sq" style="background:#B5D4F4; border: 0.5px dashed #378ADD;"></span>2023</div>
+      </div>
+      <div style="position: relative; width: 100%; height: 220px;">
+        <canvas id="trendChart" role="img" aria-label="Monthly revenue trend comparing 2024 vs 2023">Monthly revenue data for 2024 and 2023.</canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-hd">
+        <div>
+          <div class="chart-title">Revenue by category</div>
+          <div class="chart-sub">Share of total, 2024</div>
+        </div>
+      </div>
+      <div style="position: relative; width: 100%; height: 160px;">
+        <canvas id="catChart" role="img" aria-label="Donut chart showing revenue share by product category">Electronics 42%, Apparel 28%, Home 18%, Health 12%.</canvas>
+      </div>
+      <div class="legend-row" style="margin-top:10px; margin-bottom:0; justify-content:center;">
+        <div class="leg-item"><span class="leg-sq" style="background:#378ADD;"></span>Electronics 42%</div>
+        <div class="leg-item"><span class="leg-sq" style="background:#1D9E75;"></span>Apparel 28%</div>
+        <div class="leg-item"><span class="leg-sq" style="background:#EF9F27;"></span>Home 18%</div>
+        <div class="leg-item"><span class="leg-sq" style="background:#D4537E;"></span>Health 12%</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-row">
+    <div class="chart-card">
+      <div class="chart-hd">
+        <div>
+          <div class="chart-title">Top products</div>
+          <div class="chart-sub">Ranked by revenue, click header to sort</div>
+        </div>
+        <button class="ctrl-btn" onclick="sendPrompt('Which products have the highest growth potential based on the sales dashboard data? ↗')">Drill down ↗</button>
+      </div>
+      <div class="table-wrap">
+        <table id="prodTable">
+          <thead>
+            <tr>
+              <th onclick="sortTable('name')">Product <i class="ti ti-selector" aria-hidden="true" style="font-size:10px;"></i></th>
+              <th onclick="sortTable('cat')">Category <i class="ti ti-selector" aria-hidden="true" style="font-size:10px;"></i></th>
+              <th onclick="sortTable('rev')">Revenue <i class="ti ti-selector" aria-hidden="true" style="font-size:10px;"></i></th>
+              <th onclick="sortTable('units')">Units <i class="ti ti-selector" aria-hidden="true" style="font-size:10px;"></i></th>
+              <th onclick="sortTable('growth')">Growth <i class="ti ti-selector" aria-hidden="true" style="font-size:10px;"></i></th>
+              <th>Share</th>
+            </tr>
+          </thead>
+          <tbody id="prodTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div class="chart-card" style="flex:1;">
+        <div class="chart-hd">
+          <div>
+            <div class="chart-title">Sales funnel</div>
+            <div class="chart-sub">Conversion, Q1–Q4 2024</div>
+          </div>
+        </div>
+        <div id="funnelWrap"></div>
+      </div>
+      <div class="chart-card" style="padding: 14px 16px;">
+        <div class="chart-title" style="margin-bottom:10px;"><i class="ti ti-upload" aria-hidden="true" style="font-size:13px; vertical-align:-2px; margin-right:5px;"></i>Import data</div>
+        <div class="upload-zone" onclick="handleUploadClick()">
+          <div class="upload-icon"><i class="ti ti-file-upload" aria-hidden="true"></i></div>
+          <div class="upload-text">Drop your file here</div>
+          <div class="upload-sub">or click to browse</div>
+          <div class="import-btns">
+            <span class="import-btn"><i class="ti ti-file-spreadsheet" aria-hidden="true"></i> Excel</span>
+            <span class="import-btn"><i class="ti ti-csv" aria-hidden="true"></i> CSV</span>
+            <span class="import-btn"><i class="ti ti-database" aria-hidden="true"></i> Database</span>
+          </div>
+        </div>
+        <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none;" onchange="handleFile(this)">
+        <div id="importMsg" style="font-size:11px; color:var(--color-text-tertiary); margin-top:8px; text-align:center;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+const BASE_DATA = {
+  rev2024: [310,285,340,420,395,460,490,510,475,440,520,640],
+  rev2023: [260,240,290,370,340,400,430,450,420,390,470,580],
+  ord2024: [1200,1100,1350,1680,1540,1820,1960,2010,1900,1750,2100,2520],
+  ord2023: [1020,940,1150,1450,1310,1590,1730,1810,1670,1520,1880,2280],
+  aov2024: [258,259,252,250,257,253,250,254,250,251,248,254],
+  aov2023: [255,255,252,255,260,252,249,249,251,257,250,254]
+};
+
+const PRODUCTS = [
+  {name:'ProMax Headphones',cat:'Electronics',rev:520000,units:3200,growth:18.4},
+  {name:'AirComfort Jacket',cat:'Apparel',rev:380000,units:7800,growth:9.2},
+  {name:'SmartHome Hub',cat:'Home',rev:340000,units:2100,growth:22.7},
+  {name:'FitTrack Watch',cat:'Electronics',rev:310000,units:4400,growth:31.5},
+  {name:'VitaBlend Pro',cat:'Health',rev:270000,units:9200,growth:-4.3},
+  {name:'CloudStep Runners',cat:'Apparel',rev:240000,units:6100,growth:7.8},
+  {name:'EcoDesk Lamp',cat:'Home',rev:195000,units:5400,growth:14.1},
+  {name:'ImmunePlus Pack',cat:'Health',rev:180000,units:12000,growth:-2.1},
+];
+
+const FUNNEL = [
+  {label:'Visitors',val:84200,color:'#378ADD'},
+  {label:'Prospects',val:31600,color:'#1D9E75'},
+  {label:'Leads',val:11200,color:'#EF9F27'},
+  {label:'Opportunities',val:4800,color:'#D4537E'},
+  {label:'Closed',val:2430,color:'#534AB7'},
+];
+
+let currentPeriod = 'Q1';
+let currentView = 'rev';
+let sortCol = 'rev';
+let sortAsc = false;
+let trendChart, catChart;
+
+function qRange(q) {
+  return {Q1:[0,2],Q2:[3,5],Q3:[6,8],Q4:[9,11],All:[0,11]}[q];
+}
+
+function sliceData(arr, q) {
+  const [s,e] = qRange(q);
+  return arr.slice(s, e+1);
+}
+
+function sum(arr) { return arr.reduce((a,b)=>a+b,0); }
+
+function fmt(v, type) {
+  if(type==='rev') return v>=1000000 ? '$'+(v/1000000).toFixed(2)+'M' : '$'+(v/1000).toFixed(0)+'K';
+  if(type==='ord') return v.toLocaleString();
+  if(type==='aov') return '$'+Math.round(v);
+  return v;
+}
+
+function applyFilters() { updateKPIs(); updateTrend(); }
+
+function setPeriod(q) {
+  currentPeriod = q;
+  ['Q1','Q2','Q3','Q4','All'].forEach(p => {
+    const b = document.getElementById('btn'+p);
+    if(b) b.classList.toggle('active', p===q);
+  });
+  updateKPIs();
+  updateTrend();
+  document.getElementById('trendSub').textContent = q==='All' ? 'Monthly, Jan–Dec 2024' : q+' 2024, month breakdown';
+}
+
+function updateKPIs() {
+  const r24 = sliceData(BASE_DATA.rev2024, currentPeriod);
+  const r23 = sliceData(BASE_DATA.rev2023, currentPeriod);
+  const o24 = sliceData(BASE_DATA.ord2024, currentPeriod);
+  const o23 = sliceData(BASE_DATA.ord2023, currentPeriod);
+  const a24 = sliceData(BASE_DATA.aov2024, currentPeriod);
+
+  const rev = sum(r24)*1000;
+  const revPct = ((sum(r24)-sum(r23))/sum(r23)*100).toFixed(1);
+  const ord = sum(o24);
+  const ordPct = ((sum(o24)-sum(o23))/sum(o23)*100).toFixed(1);
+  const aov = Math.round(a24.reduce((a,b)=>a+b,0)/a24.length);
+
+  document.getElementById('kv-rev').textContent = fmt(rev,'rev');
+  document.getElementById('kv-ord').textContent = ord.toLocaleString();
+  document.getElementById('kv-aov').textContent = '$'+aov;
+}
+
+function setTrendView(view, btn) {
+  currentView = view;
+  document.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  updateTrend();
+}
+
+function updateTrend() {
+  const d24 = BASE_DATA[currentView+'2024'];
+  const d23 = BASE_DATA[currentView+'2023'];
+  const [s,e] = qRange(currentPeriod);
+  const labels = MONTHS.slice(s,e+1);
+  const slice24 = d24.slice(s,e+1);
+  const slice23 = d23.slice(s,e+1);
+
+  const mult = currentView==='rev' ? 1000 : 1;
+  trendChart.data.labels = labels;
+  trendChart.data.datasets[0].data = slice24.map(v=>v*mult);
+  trendChart.data.datasets[1].data = slice23.map(v=>v*mult);
+  trendChart.update();
+}
+
+function sortTable(col) {
+  if(sortCol===col) sortAsc=!sortAsc; else { sortCol=col; sortAsc=false; }
+  renderTable();
+}
+
+function renderTable() {
+  const total = PRODUCTS.reduce((a,p)=>a+p.rev,0);
+  const sorted = [...PRODUCTS].sort((a,b)=>{
+    let va = a[{name:'name',cat:'cat',rev:'rev',units:'units',growth:'growth'}[sortCol]];
+    let vb = b[{name:'name',cat:'cat',rev:'rev',units:'units',growth:'growth'}[sortCol]];
+    if(typeof va==='string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return sortAsc ? va-vb : vb-va;
+  });
+  const tb = document.getElementById('prodTbody');
+  tb.innerHTML = sorted.map(p=>{
+    const share = (p.rev/total*100).toFixed(0);
+    const gCls = p.growth>10?'pill-up':p.growth>0?'pill-mid':'pill-dn';
+    const barW = Math.round(p.rev/520000*100);
+    return `<tr>
+      <td style="font-weight:500;">${p.name}</td>
+      <td><span class="pill" style="background:var(--color-background-secondary);color:var(--color-text-secondary);">${p.cat}</span></td>
+      <td>$${(p.rev/1000).toFixed(0)}K</td>
+      <td>${p.units.toLocaleString()}</td>
+      <td><span class="pill ${gCls}">${p.growth>0?'+':''}${p.growth}%</span></td>
+      <td><div style="display:flex;align-items:center;gap:6px;"><span class="bar-mini" style="width:${barW}px;"></span><span style="font-size:11px;color:var(--color-text-tertiary);">${share}%</span></div></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderFunnel() {
+  const max = FUNNEL[0].val;
+  const wrap = document.getElementById('funnelWrap');
+  wrap.innerHTML = FUNNEL.map(f=>{
+    const pct = Math.round(f.val/max*100);
+    const convPct = f===FUNNEL[0] ? '' : Math.round(f.val/FUNNEL[FUNNEL.indexOf(f)-1].val*100)+'% conv.';
+    return `<div class="funnel-item">
+      <div class="funnel-label" style="font-size:11px;">${f.label}</div>
+      <div class="funnel-bar-wrap">
+        <div class="funnel-bar" style="width:${pct}%;background:${f.color};color:white;">${f.val.toLocaleString()}</div>
+      </div>
+      <div class="funnel-val">${convPct}</div>
+    </div>`;
+  }).join('');
+}
+
+function handleUploadClick() {
+  document.getElementById('fileInput').click();
+}
+
+function handleFile(input) {
+  const file = input.files[0];
+  if(!file) return;
+  const msg = document.getElementById('importMsg');
+  msg.textContent = 'Processing '+file.name+'…';
+  if(file.name.endsWith('.csv')) {
+    Papa.parse(file, {
+      header: true, skipEmptyLines: true,
+      complete: (res) => {
+        const rows = res.data.length;
+        const cols = res.meta.fields ? res.meta.fields.length : '?';
+        msg.textContent = '✓ Loaded '+rows+' rows × '+cols+' columns from '+file.name+'. Showing sample data.';
+        sendPrompt('I just uploaded a CSV file called '+file.name+' with '+rows+' rows. How should I analyze this sales data?');
+      },
+      error: () => { msg.textContent = 'Could not parse CSV.'; }
+    });
+  } else {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const wb = XLSX.read(e.target.result, {type:'binary'});
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(sheet);
+        msg.textContent = '✓ Loaded '+data.length+' rows from '+wb.SheetNames[0]+' in '+file.name+'.';
+        sendPrompt('I uploaded an Excel file called '+file.name+' with '+data.length+' rows. How should I analyze this sales data?');
+      } catch(err) { msg.textContent = 'Could not parse Excel file.'; }
+    };
+    reader.readAsBinaryString(file);
+  }
+}
+
+function initCharts() {
+  const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const textColor = isDark ? '#9CA3AF' : '#6B7280';
+
+  trendChart = new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels: MONTHS,
+      datasets: [
+        { label:'2024', data: BASE_DATA.rev2024.map(v=>v*1000), borderColor:'#378ADD', backgroundColor:'rgba(55,138,221,0.1)', fill:true, tension:0.4, pointRadius:3, pointHoverRadius:5, borderWidth:2 },
+        { label:'2023', data: BASE_DATA.rev2023.map(v=>v*1000), borderColor:'#B5D4F4', borderDash:[4,3], backgroundColor:'transparent', fill:false, tension:0.4, pointRadius:2, pointHoverRadius:4, borderWidth:1.5 }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(ctx)=>' '+fmt(ctx.raw,'rev') } } },
+      scales:{
+        x:{ grid:{color:gridColor}, ticks:{color:textColor,font:{size:11},autoSkip:false,maxRotation:0} },
+        y:{ grid:{color:gridColor}, ticks:{color:textColor,font:{size:11},callback:(v)=>v>=1000000?'$'+(v/1000000).toFixed(1)+'M':'$'+(v/1000).toFixed(0)+'K'}, beginAtZero:false }
+      }
+    }
+  });
+
+  catChart = new Chart(document.getElementById('catChart'), {
+    type: 'doughnut',
+    data: {
+      labels:['Electronics','Apparel','Home','Health'],
+      datasets:[{ data:[42,28,18,12], backgroundColor:['#378ADD','#1D9E75','#EF9F27','#D4537E'], borderWidth:0, hoverOffset:4 }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'65%',
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(ctx)=>ctx.label+': '+ctx.raw+'%' } } }
+    }
+  });
+}
+
+initCharts();
+renderTable();
+renderFunnel();
+</script>

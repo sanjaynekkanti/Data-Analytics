@@ -1,0 +1,404 @@
+
+<h2 class="sr-only">Customer segmentation dashboard showing 5 behavioral clusters with demographics, purchase patterns, and RFM analysis</h2>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+.wrap{padding:1rem 0;}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px;}
+.page-title{font-size:18px;font-weight:500;color:var(--color-text-primary);}
+.page-sub{font-size:12px;color:var(--color-text-tertiary);margin-top:2px;}
+.controls{display:flex;gap:8px;flex-wrap:wrap;}
+.ctrl-btn{font-size:12px;padding:5px 12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-secondary);cursor:pointer;}
+.ctrl-btn.active,.ctrl-btn:hover{background:var(--color-background-secondary);color:var(--color-text-primary);}
+.seg-strip{display:flex;gap:8px;margin-bottom:1.25rem;overflow-x:auto;padding-bottom:4px;}
+.seg-pill{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:20px;border:1.5px solid transparent;cursor:pointer;white-space:nowrap;transition:border-color 0.15s;}
+.seg-pill.active{border-color:currentColor;}
+.seg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.seg-name{font-size:13px;font-weight:500;}
+.seg-count{font-size:11px;opacity:0.7;}
+.main-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:12px;margin-bottom:12px;}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:16px;}
+.card-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.card-title{font-size:13px;font-weight:500;color:var(--color-text-primary);}
+.card-sub{font-size:11px;color:var(--color-text-tertiary);margin-top:2px;}
+.kpi-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px;}
+.kpi{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px 14px;}
+.kpi-lbl{font-size:11px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;}
+.kpi-val{font-size:20px;font-weight:500;color:var(--color-text-primary);}
+.kpi-delta{font-size:11px;margin-top:3px;}
+.up{color:#059669;}.dn{color:#DC2626;}
+.bottom-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+.radar-wrap{position:relative;width:100%;height:200px;}
+.scatter-wrap{position:relative;width:100%;height:240px;}
+.bar-wrap{position:relative;height:200px;}
+.heat-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:8px;}
+.heat-cell{height:22px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;}
+.heat-label{font-size:10px;color:var(--color-text-tertiary);padding:4px 0;text-align:center;}
+.trait-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.trait-label{font-size:11px;color:var(--color-text-secondary);width:88px;flex-shrink:0;text-align:right;}
+.trait-bar-bg{flex:1;background:var(--color-background-secondary);border-radius:3px;height:18px;overflow:hidden;}
+.trait-bar{height:100%;border-radius:3px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-size:10px;font-weight:500;color:white;transition:width 0.5s ease;}
+.age-row{display:flex;gap:4px;align-items:flex-end;height:60px;margin-top:8px;}
+.age-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.age-bar{width:100%;border-radius:3px 3px 0 0;transition:height 0.4s ease;}
+.age-lbl{font-size:9px;color:var(--color-text-tertiary);}
+.tag{display:inline-block;font-size:10px;padding:2px 7px;border-radius:8px;font-weight:500;margin:2px;}
+.insight-item{display:flex;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);}
+.insight-item:last-child{border-bottom:none;}
+.ins-icon{font-size:16px;flex-shrink:0;margin-top:1px;}
+.ins-text{font-size:12px;color:var(--color-text-secondary);line-height:1.5;}
+.ins-strong{font-weight:500;color:var(--color-text-primary);}
+.legend-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--color-text-secondary);}
+.leg-sq{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+.rfm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px;}
+.rfm-card{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px;text-align:center;}
+.rfm-val{font-size:20px;font-weight:500;}
+.rfm-lbl{font-size:10px;color:var(--color-text-tertiary);margin-top:3px;}
+@media(max-width:560px){.main-grid,.bottom-grid{grid-template-columns:1fr;}.kpi-row{grid-template-columns:repeat(2,1fr);}}
+</style>
+
+<div class="wrap">
+<div class="topbar">
+  <div>
+    <div class="page-title"><i class="ti ti-users-group" aria-hidden="true" style="font-size:16px;vertical-align:-2px;margin-right:6px;"></i>Customer segmentation</div>
+    <div class="page-sub">K-means clustering · 12,480 customers · RFM + behavioral features</div>
+  </div>
+  <div class="controls">
+    <button class="ctrl-btn active" onclick="setView('behavior',this)">Behavior</button>
+    <button class="ctrl-btn" onclick="setView('demographics',this)">Demographics</button>
+    <button class="ctrl-btn" onclick="setView('rfm',this)">RFM analysis</button>
+    <button class="ctrl-btn" onclick="sendPrompt('Give me targeted marketing recommendations for each customer segment in the segmentation dashboard ↗')">Strategies ↗</button>
+  </div>
+</div>
+
+<div class="seg-strip" id="segStrip"></div>
+
+<div class="kpi-row" id="kpiRow"></div>
+
+<div class="main-grid">
+  <div class="card">
+    <div class="card-hd">
+      <div><div class="card-title">Segment map — spend vs. frequency</div><div class="card-sub">Bubble size = customer count</div></div>
+    </div>
+    <div class="legend-row" id="scatterLegend"></div>
+    <div class="scatter-wrap"><canvas id="scatterChart" role="img" aria-label="Scatter plot of customer segments by spend vs purchase frequency">Customer segments plotted by annual spend and purchase frequency.</canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Segment profile</div><div class="card-sub" id="profileSub">Behavioral traits</div></div></div>
+    <div id="traitBars"></div>
+    <div style="margin-top:14px;">
+      <div class="card-sub" style="margin-bottom:6px;">Age distribution</div>
+      <div class="age-row" id="ageRow"></div>
+    </div>
+    <div style="margin-top:12px;" id="tagRow"></div>
+  </div>
+</div>
+
+<div class="bottom-grid">
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Behavioral radar</div><div class="card-sub">5-axis segment comparison</div></div></div>
+    <div class="legend-row" id="radarLegend"></div>
+    <div class="radar-wrap"><canvas id="radarChart" role="img" aria-label="Radar chart comparing segments across 5 behavioral dimensions">Behavioral comparison across loyalty, frequency, spend, engagement, and satisfaction.</canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Purchase channel mix</div><div class="card-sub" id="channelSub">Selected segment</div></div></div>
+    <div class="bar-wrap"><canvas id="channelChart" role="img" aria-label="Horizontal bar chart of purchase channels for selected segment">Channel breakdown for the selected customer segment.</canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title" id="rightPanelTitle">Key insights</div></div>
+    <button class="ctrl-btn" onclick="sendPrompt('What retention tactics work best for the selected customer segment? ↗')">Tactics ↗</button></div>
+    <div id="rightPanelContent"></div>
+  </div>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const SEGS = [
+  {
+    id:0, name:'Champions', count:2210, color:'#534AB7', lightColor:'#EEEDFE', textColor:'#3C3489',
+    spend:1840, freq:8.4, recency:12, aov:219, clv:4800,
+    traits:{loyalty:95,frequency:88,spend:92,engagement:85,satisfaction:91},
+    channels:{Mobile:48,Desktop:32,Store:14,'Social shop':6},
+    ages:{'18-24':8,'25-34':28,'35-44':31,'45-54':22,'55+':11},
+    tags:['High LTV','Brand loyal','Early adopter','Referral source'],
+    tagColors:['#534AB7','#534AB7','#0F6E56','#185FA5'],
+    insight:[
+      {icon:'ti-crown',title:'VIP retention focus',text:'These customers drive 32% of total revenue. Prioritize exclusive access, early launches, and loyalty rewards.'},
+      {icon:'ti-heart',title:'Advocacy opportunity',text:'High satisfaction (91%) makes them ideal for referral programs. Each referral converts at 3.2×.'},
+      {icon:'ti-trending-up',title:'Upsell receptive',text:'AOV can grow to $280+ with premium product introductions. 78% respond positively to personalized offers.'},
+    ]
+  },
+  {
+    id:1, name:'Loyalists', count:3140, color:'#1D9E75', lightColor:'#E1F5EE', textColor:'#085041',
+    spend:980, freq:5.7, recency:21, aov:172, clv:2600,
+    traits:{loyalty:80,frequency:72,spend:68,engagement:74,satisfaction:82},
+    channels:{Desktop:40,Mobile:35,Store:20,'Social shop':5},
+    ages:{'18-24':6,'25-34':22,'35-44':34,'45-54':26,'55+':12},
+    tags:['Consistent buyers','Email responsive','Multi-channel','High satisfaction'],
+    tagColors:['#0F6E56','#0F6E56','#185FA5','#0F6E56'],
+    insight:[
+      {icon:'ti-repeat',title:'Subscription conversion',text:'72% purchase frequency aligns well with subscription models. Predicted 28% conversion with a 15% incentive.'},
+      {icon:'ti-mail',title:'Email is king',text:'Email open rate at 41%, 2× the platform average. Automated flows for replenishment drive +18% revenue.'},
+      {icon:'ti-gift',title:'Tier upgrade path',text:'24% are within reach of Champion tier. A targeted nudge campaign can bridge that gap within 60 days.'},
+    ]
+  },
+  {
+    id:2, name:'Potential', count:3590, color:'#EF9F27', lightColor:'#FAEEDA', textColor:'#633806',
+    spend:460, freq:2.9, recency:38, aov:159, clv:1100,
+    traits:{loyalty:52,frequency:44,spend:42,engagement:58,satisfaction:70},
+    channels:{Mobile:44,Desktop:30,'Social shop':16,Store:10},
+    ages:{'18-24':18,'25-34':35,'35-44':25,'45-54':14,'55+':8},
+    tags:['Mobile-first','Social influenced','Price sensitive','Discovery mode'],
+    tagColors:['#BA7517','#D4537E','#BA7517','#185FA5'],
+    insight:[
+      {icon:'ti-device-mobile',title:'Mobile experience matters',text:'44% mobile channel share. Optimize checkout flow — a 1-step reduction increases conversion by an estimated 19%.'},
+      {icon:'ti-discount',title:'Price anchoring works',text:'Segment responds strongly to "was/now" pricing and bundles. Average basket size lifts 31% with bundle offers.'},
+      {icon:'ti-social',title:'Social proof converts',text:'16% of purchases influenced by social commerce. User-generated content campaigns outperform ads 2.4×.'},
+    ]
+  },
+  {
+    id:3, name:'At risk', count:2180, color:'#D85A30', lightColor:'#FAECE7', textColor:'#712B13',
+    spend:720, freq:1.2, recency:94, aov:600, clv:800,
+    traits:{loyalty:28,frequency:18,spend:55,engagement:24,satisfaction:48},
+    channels:{Desktop:52,Store:28,Mobile:16,'Social shop':4},
+    ages:{'18-24':4,'25-34':18,'35-44':29,'45-54':30,'55+':19},
+    tags:['Churning','High AOV','Desktop-heavy','Was loyal'],
+    tagColors:['#993C1D','#BA7517','#5F5E5A','#534AB7'],
+    insight:[
+      {icon:'ti-alarm',title:'Win-back window closing',text:'94-day average recency. After 120 days, recovery rate drops below 8%. Act now with a personalized offer.'},
+      {icon:'ti-cash',title:'High AOV is an asset',text:'Despite churn risk, AOV of $600 makes one recovered purchase high-value. Target with a $40-off threshold offer.'},
+      {icon:'ti-message',title:'Re-engagement sequence',text:'5-email win-back sequence with decreasing discount depth recovers 22% of at-risk customers on average.'},
+    ]
+  },
+  {
+    id:4, name:'New', count:1360, color:'#378ADD', lightColor:'#E6F1FB', textColor:'#0C447C',
+    spend:180, freq:1.0, recency:8, aov:180, clv:320,
+    traits:{loyalty:15,frequency:12,spend:18,engagement:62,satisfaction:74},
+    channels:{Mobile:54,Desktop:24,'Social shop':18,Store:4},
+    ages:{'18-24':32,'25-34':38,'35-44':18,'45-54':8,'55+':4},
+    tags:['Recently acquired','Mobile-native','High potential','Onboarding phase'],
+    tagColors:['#185FA5','#185FA5','#0F6E56','#534AB7'],
+    insight:[
+      {icon:'ti-rocket',title:'First 30 days are critical',text:'Customers who make a 2nd purchase within 30 days have 5× higher LTV. Trigger onboarding emails at day 3, 7, 14.'},
+      {icon:'ti-device-mobile',title:'Mobile-native generation',text:'54% mobile + 18% social commerce. Invest in app experience and social-first content for this cohort.'},
+      {icon:'ti-star',title:'Cultivate loyalty early',text:'Intro to loyalty program within first purchase increases repeat rate from 31% to 58%.'},
+    ]
+  },
+];
+
+let activeSeg = 0;
+let activeView = 'behavior';
+let scatterChart, radarChart, channelChart;
+
+function setView(v, btn) {
+  activeView = v;
+  document.querySelectorAll('.ctrl-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderRightPanel();
+  renderKPIs();
+}
+
+function renderSegStrip() {
+  const strip = document.getElementById('segStrip');
+  strip.innerHTML = SEGS.map(s=>`
+    <div class="seg-pill ${s.id===activeSeg?'active':''}" style="background:${s.lightColor};color:${s.textColor};" onclick="selectSeg(${s.id})">
+      <span class="seg-dot" style="background:${s.color};"></span>
+      <span class="seg-name">${s.name}</span>
+      <span class="seg-count">${s.count.toLocaleString()}</span>
+    </div>`).join('');
+}
+
+function renderKPIs() {
+  const s = SEGS[activeSeg];
+  const total = SEGS.reduce((a,x)=>a+x.count,0);
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi"><div class="kpi-lbl">Customers</div><div class="kpi-val">${s.count.toLocaleString()}</div><div class="kpi-delta" style="color:var(--color-text-tertiary);">${Math.round(s.count/total*100)}% of base</div></div>
+    <div class="kpi"><div class="kpi-lbl">Avg spend / yr</div><div class="kpi-val">$${s.spend.toLocaleString()}</div><div class="kpi-delta ${s.id<2?'up':'dn'}">${s.id<2?'↑ Top tier':'↓ Below avg'}</div></div>
+    <div class="kpi"><div class="kpi-lbl">Purchase freq</div><div class="kpi-val">${s.freq}×</div><div class="kpi-delta" style="color:var(--color-text-tertiary);">per year avg</div></div>
+    <div class="kpi"><div class="kpi-lbl">Pred. LTV</div><div class="kpi-val">$${s.clv.toLocaleString()}</div><div class="kpi-delta ${s.id<2?'up':'dn'}">${s.id<2?'↑ High value':'↓ Needs growth'}</div></div>`;
+}
+
+function renderProfile() {
+  const s = SEGS[activeSeg];
+  document.getElementById('profileSub').textContent = s.name + ' — behavioral traits';
+  const traits = [
+    {k:'loyalty',label:'Loyalty'},
+    {k:'frequency',label:'Frequency'},
+    {k:'spend',label:'Spend level'},
+    {k:'engagement',label:'Engagement'},
+    {k:'satisfaction',label:'Satisfaction'},
+  ];
+  document.getElementById('traitBars').innerHTML = traits.map(t=>`
+    <div class="trait-row">
+      <div class="trait-label">${t.label}</div>
+      <div class="trait-bar-bg">
+        <div class="trait-bar" style="width:${s.traits[t.k]}%;background:${s.color};">${s.traits[t.k]}</div>
+      </div>
+    </div>`).join('');
+  const ages = s.ages;
+  const keys = Object.keys(ages);
+  const maxA = Math.max(...Object.values(ages));
+  document.getElementById('ageRow').innerHTML = keys.map(k=>`
+    <div class="age-col">
+      <div class="age-bar" style="height:${Math.round(ages[k]/maxA*52)}px;background:${s.color};opacity:${0.4+ages[k]/maxA*0.6};"></div>
+      <div class="age-lbl">${k}</div>
+    </div>`).join('');
+  document.getElementById('tagRow').innerHTML = s.tags.map((t,i)=>`
+    <span class="tag" style="background:${SEGS[activeSeg].lightColor};color:${SEGS[activeSeg].textColor};">${t}</span>`).join('');
+}
+
+function renderScatterLegend() {
+  document.getElementById('scatterLegend').innerHTML = SEGS.map(s=>`
+    <div class="leg-item"><span class="leg-sq" style="background:${s.color};"></span>${s.name}</div>`).join('');
+}
+
+function renderInsights() {
+  const s = SEGS[activeSeg];
+  document.getElementById('rightPanelTitle').textContent = s.name + ' — insights';
+  document.getElementById('rightPanelContent').innerHTML = s.insight.map(ins=>`
+    <div class="insight-item">
+      <i class="ti ${ins.icon} ins-icon" aria-hidden="true" style="color:${s.color};"></i>
+      <div><div class="ins-text"><span class="ins-strong">${ins.title}. </span>${ins.text}</div></div>
+    </div>`).join('');
+}
+
+function renderRFMPanel() {
+  const s = SEGS[activeSeg];
+  document.getElementById('rightPanelTitle').textContent = s.name + ' — RFM scores';
+  const rScore = Math.round(10 - s.recency/12);
+  const fScore = Math.round(s.freq/8.4*10);
+  const mScore = Math.round(s.spend/1840*10);
+  document.getElementById('rightPanelContent').innerHTML = `
+    <div style="margin-bottom:10px;">
+      <div style="font-size:11px;color:var(--color-text-tertiary);margin-bottom:4px;">Recency (days since last purchase)</div>
+      <div style="font-size:13px;font-weight:500;color:var(--color-text-primary);">${s.recency} days avg</div>
+    </div>
+    <div class="rfm-grid">
+      <div class="rfm-card"><div class="rfm-val" style="color:${s.color};">${Math.max(1,Math.min(10,rScore))}</div><div class="rfm-lbl">R score</div></div>
+      <div class="rfm-card"><div class="rfm-val" style="color:${s.color};">${Math.max(1,Math.min(10,fScore))}</div><div class="rfm-lbl">F score</div></div>
+      <div class="rfm-card"><div class="rfm-val" style="color:${s.color};">${Math.max(1,Math.min(10,mScore))}</div><div class="rfm-lbl">M score</div></div>
+    </div>
+    <div style="margin-top:12px;">
+    ${s.insight.map(ins=>`<div class="insight-item"><i class="ti ${ins.icon} ins-icon" aria-hidden="true" style="color:${s.color};"></i><div class="ins-text"><span class="ins-strong">${ins.title}. </span>${ins.text}</div></div>`).join('')}
+    </div>`;
+}
+
+function renderRightPanel() {
+  if(activeView==='rfm') renderRFMPanel();
+  else renderInsights();
+}
+
+function initScatter() {
+  scatterChart = new Chart(document.getElementById('scatterChart'),{
+    type:'bubble',
+    data:{datasets:SEGS.map(s=>({
+      label:s.name,
+      data:[{x:s.freq,y:s.spend,r:Math.round(Math.sqrt(s.count/30))}],
+      backgroundColor:s.color+'99',
+      borderColor:s.color,
+      borderWidth:2,
+    }))},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      layout:{padding:16},
+      plugins:{legend:{display:false},tooltip:{callbacks:{
+        label:(ctx)=>`${ctx.dataset.label}: ${ctx.raw.x}× / $${ctx.raw.y}`
+      }}},
+      scales:{
+        x:{title:{display:true,text:'Purchase frequency (×/yr)',font:{size:11},color:'#888780'},grid:{color:'rgba(136,135,128,0.1)'},ticks:{color:'#888780',font:{size:11}},min:0,max:10},
+        y:{title:{display:true,text:'Annual spend ($)',font:{size:11},color:'#888780'},grid:{color:'rgba(136,135,128,0.1)'},ticks:{color:'#888780',font:{size:11},callback:v=>'$'+v},min:0,max:2200}
+      }
+    }
+  });
+}
+
+function initRadar() {
+  const labels=['Loyalty','Frequency','Spend','Engagement','Satisfaction'];
+  radarChart = new Chart(document.getElementById('radarChart'),{
+    type:'radar',
+    data:{
+      labels,
+      datasets: SEGS.map((s,i)=>({
+        label:s.name,
+        data:Object.values(s.traits),
+        borderColor:s.color,
+        backgroundColor:s.color+'22',
+        borderWidth: i===activeSeg ? 2 : 1,
+        pointRadius: i===activeSeg ? 4 : 2,
+        borderDash: i===activeSeg ? [] : [4,3],
+      }))
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{r:{min:0,max:100,ticks:{stepSize:25,color:'#888780',font:{size:9},backdropColor:'transparent'},grid:{color:'rgba(136,135,128,0.15)'},pointLabels:{font:{size:11},color:'#888780'}}}
+    }
+  });
+  document.getElementById('radarLegend').innerHTML = SEGS.map(s=>`<div class="leg-item"><span class="leg-sq" style="background:${s.color};border-radius:50%;"></span>${s.name}</div>`).join('');
+}
+
+function initChannel() {
+  const s = SEGS[activeSeg];
+  const labels = Object.keys(s.channels);
+  const vals = Object.values(s.channels);
+  channelChart = new Chart(document.getElementById('channelChart'),{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[{label:'Share %',data:vals,backgroundColor:labels.map((_,i)=>i===0?s.color:s.color+'66'),borderRadius:4,borderSkipped:false}]
+    },
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.raw+'%'}}},
+      scales:{
+        x:{grid:{color:'rgba(136,135,128,0.1)'},ticks:{color:'#888780',font:{size:11},callback:v=>v+'%'},max:70},
+        y:{grid:{display:false},ticks:{color:'#888780',font:{size:11}}}
+      }
+    }
+  });
+  document.getElementById('channelSub').textContent = SEGS[activeSeg].name + ' — channel mix';
+}
+
+function updateChannel() {
+  const s = SEGS[activeSeg];
+  const vals = Object.values(s.channels);
+  channelChart.data.labels = Object.keys(s.channels);
+  channelChart.data.datasets[0].data = vals;
+  channelChart.data.datasets[0].backgroundColor = vals.map((_,i)=>i===0?s.color:s.color+'66');
+  channelChart.update();
+  document.getElementById('channelSub').textContent = s.name + ' — channel mix';
+}
+
+function updateRadarHighlight() {
+  radarChart.data.datasets.forEach((ds,i)=>{
+    ds.borderWidth = i===activeSeg ? 2.5 : 1;
+    ds.pointRadius = i===activeSeg ? 4 : 2;
+    ds.borderDash = i===activeSeg ? [] : [4,3];
+  });
+  radarChart.update();
+}
+
+function selectSeg(id) {
+  activeSeg = id;
+  renderSegStrip();
+  renderKPIs();
+  renderProfile();
+  renderRightPanel();
+  updateChannel();
+  updateRadarHighlight();
+}
+
+renderSegStrip();
+renderKPIs();
+renderProfile();
+renderScatterLegend();
+renderInsights();
+
+document.addEventListener('DOMContentLoaded',()=>{});
+setTimeout(()=>{
+  initScatter();
+  initRadar();
+  initChannel();
+},100);
+</script>

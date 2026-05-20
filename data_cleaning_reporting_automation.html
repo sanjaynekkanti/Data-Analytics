@@ -1,0 +1,508 @@
+
+<h2 class="sr-only">Data cleaning and reporting automation studio with live pipeline simulation, issue detection, before/after comparison, and automated visual report generation</h2>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+.app{padding:1rem 0;}
+.topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1.25rem;}
+.t1{font-size:18px;font-weight:500;color:var(--color-text-primary);}
+.t2{font-size:11px;color:var(--color-text-tertiary);margin-top:2px;}
+.btn{font-size:12px;padding:5px 12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-secondary);cursor:pointer;transition:background .15s;}
+.btn:hover{background:var(--color-background-secondary);color:var(--color-text-primary);}
+.btn.primary{background:#1D9E75;color:#E1F5EE;border-color:#0F6E56;}
+.btn.primary:hover{background:#0F6E56;}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:16px;}
+.card-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:8px;}
+.card-title{font-size:13px;font-weight:500;color:var(--color-text-primary);}
+.card-sub{font-size:11px;color:var(--color-text-tertiary);margin-top:2px;}
+.kpi-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px;}
+.kpi{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:11px 13px;}
+.kpi-lbl{font-size:11px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;}
+.kpi-val{font-size:20px;font-weight:500;color:var(--color-text-primary);}
+.kpi-sub{font-size:11px;margin-top:3px;}
+.ok{color:#059669;}.warn{color:#D97706;}.bad{color:#DC2626;}.info{color:#185FA5;}
+.two-col{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-bottom:12px;}
+.three-col{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:12px;}
+.pipeline{display:flex;align-items:stretch;gap:0;margin-bottom:12px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden;}
+.pstep{flex:1;padding:12px 10px;border-right:0.5px solid var(--color-border-tertiary);cursor:pointer;transition:background .15s;}
+.pstep:last-child{border-right:none;}
+.pstep:hover{background:var(--color-background-secondary);}
+.pstep.active{background:var(--color-background-secondary);}
+.pstep.done .ps-icon{color:#1D9E75;}
+.pstep.running .ps-icon{color:#378ADD;}
+.pstep.pending .ps-icon{color:#888780;}
+.pstep.error .ps-icon{color:#E24B4A;}
+.ps-icon{font-size:18px;margin-bottom:5px;}
+.ps-name{font-size:11px;font-weight:500;color:var(--color-text-primary);}
+.ps-stat{font-size:10px;margin-top:3px;}
+.issue-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);}
+.issue-row:last-child{border-bottom:none;}
+.issue-type{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.issue-label{font-size:12px;color:var(--color-text-primary);flex:1;}
+.issue-col{font-size:11px;color:var(--color-text-tertiary);width:80px;}
+.issue-count{font-size:12px;font-weight:500;width:36px;text-align:right;}
+.issue-fix{font-size:10px;padding:2px 7px;border-radius:8px;font-weight:500;}
+.fix-auto{background:#D1FAE5;color:#065F46;}
+.fix-flag{background:#FEF3C7;color:#78350F;}
+.fix-drop{background:#FEE2E2;color:#7F1D1D;}
+.data-table{width:100%;border-collapse:collapse;font-size:11px;font-family:var(--font-mono);}
+.data-table th{font-size:10px;font-weight:500;color:var(--color-text-tertiary);text-align:left;padding:5px 8px;border-bottom:0.5px solid var(--color-border-tertiary);text-transform:uppercase;letter-spacing:.05em;font-family:var(--font-sans);}
+.data-table td{padding:5px 8px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary);vertical-align:middle;}
+.data-table tr:last-child td{border-bottom:none;}
+.cell-bad{background:#FEF3C7;color:#78350F;border-radius:3px;padding:1px 4px;}
+.cell-null{background:#FEE2E2;color:#7F1D1D;border-radius:3px;padding:1px 4px;font-style:italic;}
+.cell-ok{color:var(--color-text-primary);}
+.cell-fixed{background:#D1FAE5;color:#065F46;border-radius:3px;padding:1px 4px;}
+.progress-bar{height:6px;background:var(--color-background-secondary);border-radius:3px;overflow:hidden;margin-top:6px;}
+.progress-fill{height:100%;border-radius:3px;transition:width .8s ease;}
+.rule-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary);}
+.rule-row:last-child{border-bottom:none;}
+.rule-name{font-size:12px;color:var(--color-text-primary);flex:1;}
+.toggle{width:32px;height:18px;border-radius:9px;border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;}
+.toggle.on{background:#1D9E75;border-color:#0F6E56;}
+.toggle-dot{position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:left .2s;}
+.toggle.on .toggle-dot{left:16px;}
+.sched-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px;}
+.sched-row:last-child{border-bottom:none;}
+.sched-name{color:var(--color-text-primary);}
+.sched-time{color:var(--color-text-tertiary);font-size:11px;}
+.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:8px;font-weight:500;}
+.badge-ok{background:#D1FAE5;color:#065F46;}
+.badge-run{background:#DBEAFE;color:#1E40AF;}
+.badge-warn{background:#FEF3C7;color:#78350F;}
+.chart-wrap{position:relative;width:100%;height:180px;}
+.log-line{font-size:11px;font-family:var(--font-mono);padding:3px 0;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;gap:8px;}
+.log-line:last-child{border-bottom:none;}
+.log-time{color:var(--color-text-tertiary);flex-shrink:0;}
+.log-ok{color:#059669;}.log-warn{color:#D97706;}.log-err{color:#DC2626;}.log-info{color:#185FA5;}
+.run-btn-wrap{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.run-progress{flex:1;height:8px;background:var(--color-background-secondary);border-radius:4px;overflow:hidden;}
+.run-fill{height:100%;background:#1D9E75;border-radius:4px;width:0%;transition:width .4s ease;}
+@media(max-width:560px){.kpi-row,.two-col,.three-col{grid-template-columns:1fr;}.pipeline{flex-direction:column;}}
+</style>
+
+<div class="app">
+
+<div class="topbar">
+  <div>
+    <div class="t1"><i class="ti ti-settings-automation" aria-hidden="true" style="font-size:16px;vertical-align:-2px;margin-right:6px;"></i>Data cleaning & reporting automation</div>
+    <div class="t2">Pipeline engine · 8 cleaning rules · automated report generation</div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <select id="datasetPicker" style="font-size:12px;padding:5px 10px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-secondary);cursor:pointer;" onchange="switchDataset()">
+      <option value="sales">Sales records</option>
+      <option value="customers">Customer CRM</option>
+      <option value="inventory">Inventory log</option>
+    </select>
+    <button class="btn primary" onclick="runPipeline()"><i class="ti ti-player-play" aria-hidden="true" style="font-size:12px;margin-right:4px;"></i>Run pipeline</button>
+    <button class="btn" onclick="sendPrompt('Generate Python code for this entire data cleaning and automation pipeline using pandas ↗')">Export Python ↗</button>
+  </div>
+</div>
+
+<div class="run-btn-wrap">
+  <span style="font-size:12px;color:var(--color-text-tertiary);" id="runStatus">Ready · click Run pipeline to start</span>
+  <div class="run-progress"><div class="run-fill" id="runFill"></div></div>
+  <span style="font-size:12px;font-weight:500;color:var(--color-text-primary);" id="runPct">0%</span>
+</div>
+
+<div class="pipeline" id="pipeline"></div>
+
+<div class="kpi-row" id="kpiRow"></div>
+
+<div class="two-col" style="margin-bottom:12px;">
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Issues detected</div><div class="card-sub" id="issuesSub">Scan results by column</div></div><span class="badge badge-ok" id="issuesBadge">Scanned</span></div>
+    <div id="issuesList"></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Before / after preview</div><div class="card-sub">Sample rows — dirty vs cleaned</div></div>
+    <div style="display:flex;gap:4px;">
+      <button class="btn" id="btnBefore" onclick="togglePreview('before')" style="font-size:11px;padding:3px 8px;">Before</button>
+      <button class="btn" id="btnAfter" onclick="togglePreview('after')" style="font-size:11px;padding:3px 8px;">After</button>
+    </div>
+    </div>
+    <div style="overflow-x:auto;" id="previewTable"></div>
+  </div>
+</div>
+
+<div class="three-col">
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Cleaning rules</div><div class="card-sub">Toggle to enable/disable</div></div></div>
+    <div id="rulesList"></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Data quality score</div><div class="card-sub">Before vs after cleaning</div></div></div>
+    <div class="chart-wrap"><canvas id="qualityChart" role="img" aria-label="Bar chart comparing data quality scores before and after cleaning across five dimensions">Quality comparison: completeness, consistency, uniqueness, validity, and timeliness.</canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Report schedule</div><div class="card-sub">Automated delivery</div></div>
+    <button class="btn" onclick="sendPrompt('How do I set up automated email delivery for these reports using Python and smtplib? ↗')">Configure ↗</button>
+    </div>
+    <div id="scheduleList"></div>
+    <div style="margin-top:12px;border-top:0.5px solid var(--color-border-tertiary);padding-top:10px;">
+      <div class="card-sub" style="margin-bottom:8px;">Pipeline log</div>
+      <div id="logLines"></div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const TICK='#888780', GRID='rgba(136,135,128,0.12)';
+
+const DATASETS={
+  sales:{
+    name:'Sales records',rows:14280,cols:['order_id','date','customer','amount','region','status'],
+    issues:[
+      {label:'Missing values',col:'amount',count:312,type:'#E24B4A',fix:'auto',fixLabel:'fill-median'},
+      {label:'Duplicate rows',col:'order_id',count:87,type:'#D97706',fix:'drop',fixLabel:'de-dup'},
+      {label:'Invalid format',col:'date',count:203,type:'#EF9F27',fix:'auto',fixLabel:'parse-fix'},
+      {label:'Outliers (>3σ)',col:'amount',count:44,type:'#534AB7',fix:'flag',fixLabel:'flag-review'},
+      {label:'Inconsistent case',col:'region',count:521,type:'#378ADD',fix:'auto',fixLabel:'normalize'},
+      {label:'Empty strings',col:'customer',count:91,type:'#D4537E',fix:'auto',fixLabel:'→ NULL'},
+    ],
+    before:[
+      {order_id:'ORD-1042',date:'2024-03-15',customer:'ACME Corp',amount:'$1,240.00',region:'North',status:'complete'},
+      {order_id:'ORD-1043',date:'15/03/2024',customer:'',amount:'NULL',region:'north',status:'Complete'},
+      {order_id:'ORD-1044',date:'2024-03-15',customer:'Beta LLC',amount:'$89,420.00',region:'NORTH',status:'pending'},
+      {order_id:'ORD-1042',date:'2024-03-15',customer:'ACME Corp',amount:'$1,240.00',region:'North',status:'complete'},
+      {order_id:'ORD-1046',date:'Mar 16 2024',customer:'Gamma Co',amount:'$580.50',region:'South',status:'complete'},
+    ],
+    after:[
+      {order_id:'ORD-1042',date:'2024-03-15',customer:'ACME Corp',amount:'$1,240.00',region:'North',status:'complete'},
+      {order_id:'ORD-1043',date:'2024-03-15',customer:'NULL',amount:'$1,180.00',region:'North',status:'complete',fixes:['date','customer','amount','region','status']},
+      {order_id:'ORD-1044',date:'2024-03-15',customer:'Beta LLC',amount:'[FLAGGED]',region:'North',status:'pending',fixes:['amount','region']},
+      {order_id:'ORD-1046',date:'2024-03-16',customer:'Gamma Co',amount:'$580.50',region:'South',status:'complete',fixes:['date']},
+    ],
+    quality:{before:[72,58,94,81,66],after:[97,91,99,96,89]},
+    kpis:{dirty:14280,dupes:87,nulls:312,cleaned:13771,score:94,time:'1.8s'}
+  },
+  customers:{
+    name:'Customer CRM',rows:8940,cols:['cust_id','name','email','phone','country','segment'],
+    issues:[
+      {label:'Invalid emails',col:'email',count:218,type:'#E24B4A',fix:'flag',fixLabel:'flag-review'},
+      {label:'Duplicate contacts',col:'email',count:134,type:'#D97706',fix:'drop',fixLabel:'de-dup'},
+      {label:'Missing country',col:'country',count:401,type:'#EF9F27',fix:'auto',fixLabel:'geo-lookup'},
+      {label:'Phone format mix',col:'phone',count:673,type:'#378ADD',fix:'auto',fixLabel:'normalize'},
+      {label:'Blank segments',col:'segment',count:189,type:'#534AB7',fix:'auto',fixLabel:'→ Unknown'},
+      {label:'Name casing',col:'name',count:842,type:'#D4537E',fix:'auto',fixLabel:'title-case'},
+    ],
+    before:[
+      {cust_id:'C-001',name:'JOHN SMITH',email:'jsmith@co.com',phone:'(415)5551234',country:'US',segment:''},
+      {cust_id:'C-002',name:'jane doe',email:'jane@@bad.com',phone:'4155559876',country:'NULL',segment:'Pro'},
+      {cust_id:'C-003',name:'Carlos García',email:'cg@acme.com',phone:'+1-415-555-0011',country:'Mexico',segment:'Enterprise'},
+      {cust_id:'C-002',name:'jane doe',email:'jane@@bad.com',phone:'4155559876',country:'NULL',segment:'Pro'},
+      {cust_id:'C-005',name:'Wei ZHANG',email:'wz@corp.cn',phone:'86 138 0000 1234',country:'China',segment:''},
+    ],
+    after:[
+      {cust_id:'C-001',name:'John Smith',email:'jsmith@co.com',phone:'+1 415 555 1234',country:'US',segment:'Unknown',fixes:['name','phone','segment']},
+      {cust_id:'C-002',name:'Jane Doe',email:'[FLAGGED]',phone:'+1 415 555 9876',country:'US',segment:'Pro',fixes:['name','email','phone','country']},
+      {cust_id:'C-003',name:'Carlos García',email:'cg@acme.com',phone:'+1 415 555 0011',country:'Mexico',segment:'Enterprise'},
+      {cust_id:'C-005',name:'Wei Zhang',email:'wz@corp.cn',phone:'+86 138 0000 1234',country:'China',segment:'Unknown',fixes:['name','phone','segment']},
+    ],
+    quality:{before:[63,71,88,55,78],after:[89,93,99,92,90]},
+    kpis:{dirty:8940,dupes:134,nulls:401,cleaned:8538,score:91,time:'2.4s'}
+  },
+  inventory:{
+    name:'Inventory log',rows:22410,cols:['sku','product','qty','cost','location','updated'],
+    issues:[
+      {label:'Negative quantities',col:'qty',count:56,type:'#E24B4A',fix:'flag',fixLabel:'flag-review'},
+      {label:'Missing cost',col:'cost',count:284,type:'#D97706',fix:'auto',fixLabel:'fill-median'},
+      {label:'Unknown location',col:'location',count:198,type:'#EF9F27',fix:'flag',fixLabel:'flag-review'},
+      {label:'Stale timestamps',col:'updated',count:730,type:'#378ADD',fix:'auto',fixLabel:'recalc'},
+      {label:'Duplicate SKUs',col:'sku',count:112,type:'#534AB7',fix:'drop',fixLabel:'de-dup'},
+      {label:'Product name junk',col:'product',count:341,type:'#D4537E',fix:'auto',fixLabel:'strip-chars'},
+    ],
+    before:[
+      {sku:'SKU-A001',product:'Widget Pro  ',qty:'240',cost:'$12.50',location:'WH-1',updated:'2024-01-10'},
+      {sku:'SKU-A002',product:'Gadget  ##',qty:'-5',cost:'NULL',location:'UNKNOWN',updated:'2023-06-01'},
+      {sku:'SKU-A003',product:'Doohickey',qty:'88',cost:'$34.00',location:'WH-2',updated:'2024-03-18'},
+      {sku:'SKU-A001',product:'Widget Pro  ',qty:'240',cost:'$12.50',location:'WH-1',updated:'2024-01-10'},
+      {sku:'SKU-A005',product:'  Thingamajig',qty:'12',cost:'$8.75',location:'WH-3',updated:'2024-03-20'},
+    ],
+    after:[
+      {sku:'SKU-A001',product:'Widget Pro',qty:'240',cost:'$12.50',location:'WH-1',updated:'2024-03-20'},
+      {sku:'SKU-A002',product:'Gadget',qty:'[FLAGGED]',cost:'$21.30',location:'[FLAGGED]',updated:'2024-03-20',fixes:['product','qty','cost','location','updated']},
+      {sku:'SKU-A003',product:'Doohickey',qty:'88',cost:'$34.00',location:'WH-2',updated:'2024-03-20',fixes:['updated']},
+      {sku:'SKU-A005',product:'Thingamajig',qty:'12',cost:'$8.75',location:'WH-3',updated:'2024-03-20',fixes:['product','updated']},
+    ],
+    quality:{before:[68,61,92,74,52],after:[92,88,99,91,94]},
+    kpis:{dirty:22410,dupes:112,nulls:284,cleaned:21832,score:96,time:'3.1s'}
+  }
+};
+
+const STEPS=[
+  {id:'ingest',name:'Ingest',icon:'ti-database',stat:'Load & parse'},
+  {id:'profile',name:'Profile',icon:'ti-chart-dots',stat:'Scan columns'},
+  {id:'detect',name:'Detect',icon:'ti-search',stat:'Flag issues'},
+  {id:'clean',name:'Clean',icon:'ti-wand',stat:'Apply rules'},
+  {id:'validate',name:'Validate',icon:'ti-shield-check',stat:'QA checks'},
+  {id:'report',name:'Report',icon:'ti-file-analytics',stat:'Generate'},
+];
+
+const RULES=[
+  {id:'r1',name:'Fill missing numerics with column median',on:true},
+  {id:'r2',name:'Remove exact duplicate rows',on:true},
+  {id:'r3',name:'Normalize date formats to ISO 8601',on:true},
+  {id:'r4',name:'Standardize text case (title / lower)',on:true},
+  {id:'r5',name:'Replace empty strings with NULL',on:true},
+  {id:'r6',name:'Flag statistical outliers (>3σ)',on:false},
+  {id:'r7',name:'Trim whitespace from string fields',on:true},
+  {id:'r8',name:'Validate & flag malformed emails',on:false},
+];
+
+const SCHEDULE=[
+  {name:'Daily quality report',time:'06:00 · every day',badge:'badge-ok'},
+  {name:'Weekly executive summary',time:'Mon 08:00',badge:'badge-ok'},
+  {name:'Monthly data audit',time:'1st of month',badge:'badge-warn'},
+  {name:'On-demand pipeline run',time:'Trigger: file upload',badge:'badge-run'},
+];
+
+let dataset='sales', previewMode='before', pipelineRunning=false, qualityChart=null;
+let stepStates={ingest:'done',profile:'done',detect:'done',clean:'pending',validate:'pending',report:'pending'};
+let ruleStates={r1:true,r2:true,r3:true,r4:true,r5:true,r6:false,r7:true,r8:false};
+
+const LOGS=[
+  {time:'09:14:02',cls:'log-info',msg:'Pipeline initialized · dataset: '+DATASETS[dataset].name},
+  {time:'09:14:03',cls:'log-ok',msg:'[INGEST] 14,280 rows loaded · 6 columns'},
+  {time:'09:14:04',cls:'log-ok',msg:'[PROFILE] Column types inferred · 0 schema errors'},
+  {time:'09:14:05',cls:'log-warn',msg:'[DETECT] 1,258 issues found across 6 columns'},
+  {time:'09:14:06',cls:'log-info',msg:'[CLEAN] Awaiting pipeline run...'},
+];
+
+function ds(){return DATASETS[dataset];}
+
+function renderPipeline(){
+  document.getElementById('pipeline').innerHTML=STEPS.map(s=>{
+    const state=stepStates[s.id]||'pending';
+    const stateLabel={done:'<span class="badge badge-ok">Done</span>',running:'<span class="badge badge-run">Running</span>',pending:'<span style="font-size:10px;color:var(--color-text-tertiary);">Pending</span>',error:'<span class="badge" style="background:#FEE2E2;color:#7F1D1D;">Error</span>'}[state];
+    return `<div class="pstep ${state}" onclick="clickStep('${s.id}')">
+      <div class="ps-icon"><i class="ti ${s.icon}" aria-hidden="true"></i></div>
+      <div class="ps-name">${s.name}</div>
+      <div class="ps-stat" style="color:var(--color-text-tertiary);font-size:10px;">${s.stat}</div>
+      <div style="margin-top:5px;">${stateLabel}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderKPIs(){
+  const d=ds();
+  const pct=Math.round((d.kpis.dirty-d.kpis.dupes)/d.kpis.dirty*100);
+  document.getElementById('kpiRow').innerHTML=`
+    <div class="kpi"><div class="kpi-lbl">Raw rows</div><div class="kpi-val">${d.kpis.dirty.toLocaleString()}</div><div class="kpi-sub info">Input dataset</div></div>
+    <div class="kpi"><div class="kpi-lbl">Issues found</div><div class="kpi-val warn">${d.issues.reduce((a,x)=>a+x.count,0).toLocaleString()}</div><div class="kpi-sub warn">Across ${d.issues.length} types</div></div>
+    <div class="kpi"><div class="kpi-lbl">Rows cleaned</div><div class="kpi-val ok">${d.kpis.cleaned.toLocaleString()}</div><div class="kpi-sub ok">${pct}% retained</div></div>
+    <div class="kpi"><div class="kpi-lbl">Quality score</div><div class="kpi-val ok">${d.kpis.score}%</div><div class="kpi-sub ok">After cleaning · <span style="color:var(--color-text-tertiary);">${d.kpis.time}</span></div></div>`;
+}
+
+function renderIssues(){
+  const d=ds();
+  document.getElementById('issuesSub').textContent=`${d.rows.toLocaleString()} rows · ${d.issues.reduce((a,x)=>a+x.count,0)} issues`;
+  document.getElementById('issuesList').innerHTML=d.issues.map(iss=>`
+    <div class="issue-row">
+      <span class="issue-type" style="background:${iss.type};"></span>
+      <span class="issue-label">${iss.label}</span>
+      <span class="issue-col">${iss.col}</span>
+      <span class="issue-count">${iss.count}</span>
+      <span class="issue-fix ${iss.fix==='auto'?'fix-auto':iss.fix==='flag'?'fix-flag':'fix-drop'}">${iss.fixLabel}</span>
+    </div>`).join('');
+}
+
+function togglePreview(mode){
+  previewMode=mode;
+  document.getElementById('btnBefore').style.background=mode==='before'?'var(--color-background-secondary)':'';
+  document.getElementById('btnAfter').style.background=mode==='after'?'var(--color-background-secondary)':'';
+  renderPreview();
+}
+
+function renderPreview(){
+  const d=ds();
+  const rows=previewMode==='before'?d.before:d.after;
+  const cols=d.cols;
+  const html=`<table class="data-table">
+    <thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(row=>`<tr>${cols.map(col=>{
+      const v=row[col]||'';
+      const fixes=row.fixes||[];
+      if(previewMode==='before'){
+        if(v==='NULL'||v===''||v==='UNKNOWN') return `<td><span class="cell-null">${v||'(empty)'}</span></td>`;
+        if(v.includes('@@')||v.includes('##')||v==='UNKNOWN') return `<td><span class="cell-bad">${v}</span></td>`;
+        return `<td class="cell-ok">${v}</td>`;
+      } else {
+        if(fixes.includes(col)){
+          if(v.includes('FLAG')) return `<td><span class="cell-bad">${v}</span></td>`;
+          if(v==='NULL') return `<td><span class="cell-null">NULL</span></td>`;
+          return `<td><span class="cell-fixed">${v}</span></td>`;
+        }
+        return `<td class="cell-ok">${v}</td>`;
+      }
+    }).join('')}</tr>`).join('')}
+    </tbody></table>`;
+  document.getElementById('previewTable').innerHTML=html;
+}
+
+function renderRules(){
+  document.getElementById('rulesList').innerHTML=RULES.map(r=>`
+    <div class="rule-row">
+      <span class="rule-name">${r.name}</span>
+      <div class="toggle ${ruleStates[r.id]?'on':''}" onclick="toggleRule('${r.id}')" role="switch" aria-checked="${ruleStates[r.id]}" aria-label="${r.name}">
+        <div class="toggle-dot"></div>
+      </div>
+    </div>`).join('');
+}
+
+function toggleRule(id){
+  ruleStates[id]=!ruleStates[id];
+  renderRules();
+}
+
+function renderSchedule(){
+  document.getElementById('scheduleList').innerHTML=SCHEDULE.map(s=>`
+    <div class="sched-row">
+      <div><div class="sched-name">${s.name}</div><div class="sched-time">${s.time}</div></div>
+      <span class="badge ${s.badge}">${s.badge==='badge-ok'?'Active':s.badge==='badge-run'?'Live':'Config'}</span>
+    </div>`).join('');
+}
+
+function renderLog(){
+  const d=ds();
+  const logs=[
+    {time:'09:14:02',cls:'log-info',msg:`Pipeline init · ${d.name}`},
+    {time:'09:14:03',cls:'log-ok',msg:`[INGEST] ${d.rows.toLocaleString()} rows · ${d.cols.length} cols`},
+    {time:'09:14:04',cls:'log-ok',msg:'[PROFILE] Types inferred · 0 schema errors'},
+    {time:'09:14:05',cls:'log-warn',msg:`[DETECT] ${d.issues.reduce((a,x)=>a+x.count,0)} issues found`},
+    {time:'09:14:06',cls:'log-info',msg:'[CLEAN] Awaiting run...'},
+  ];
+  document.getElementById('logLines').innerHTML=logs.map(l=>`
+    <div class="log-line"><span class="log-time">${l.time}</span><span class="${l.cls}">${l.msg}</span></div>`).join('');
+}
+
+function renderQualityChart(){
+  const d=ds();
+  const dims=['Completeness','Consistency','Uniqueness','Validity','Timeliness'];
+  if(qualityChart){
+    qualityChart.data.datasets[0].data=d.quality.before;
+    qualityChart.data.datasets[1].data=d.quality.after;
+    qualityChart.update();
+    return;
+  }
+  qualityChart=new Chart(document.getElementById('qualityChart'),{
+    type:'bar',
+    data:{
+      labels:dims,
+      datasets:[
+        {label:'Before',data:d.quality.before,backgroundColor:'rgba(232,90,48,0.5)',borderRadius:3,borderSkipped:false},
+        {label:'After',data:d.quality.after,backgroundColor:'rgba(29,158,117,0.7)',borderRadius:3,borderSkipped:false},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.raw}%`}}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:TICK,font:{size:10},maxRotation:0}},
+        y:{grid:{color:GRID},ticks:{color:TICK,font:{size:10},callback:v=>v+'%'},min:0,max:100}
+      }
+    }
+  });
+}
+
+function renderAll(){
+  renderPipeline();
+  renderKPIs();
+  renderIssues();
+  renderPreview();
+  renderRules();
+  renderSchedule();
+  renderLog();
+  renderQualityChart();
+}
+
+function switchDataset(){
+  dataset=document.getElementById('datasetPicker').value;
+  stepStates={ingest:'done',profile:'done',detect:'done',clean:'pending',validate:'pending',report:'pending'};
+  previewMode='before';
+  document.getElementById('runFill').style.width='0%';
+  document.getElementById('runPct').textContent='0%';
+  document.getElementById('runStatus').textContent='Ready · click Run pipeline to start';
+  renderAll();
+}
+
+function clickStep(id){
+  const order=['ingest','profile','detect','clean','validate','report'];
+  const idx=order.indexOf(id);
+  sendPrompt(`Explain what the "${STEPS[idx].name}" step does in a data cleaning pipeline and what checks it performs ↗`);
+}
+
+function runPipeline(){
+  if(pipelineRunning) return;
+  pipelineRunning=true;
+  const d=ds();
+  const order=['ingest','profile','detect','clean','validate','report'];
+  Object.keys(stepStates).forEach(k=>stepStates[k]='pending');
+  document.getElementById('runFill').style.width='0%';
+  document.getElementById('runPct').textContent='0%';
+  previewMode='before';
+  renderAll();
+
+  const totalIssues=d.issues.reduce((a,x)=>a+x.count,0);
+  const logEl=document.getElementById('logLines');
+  const appendLog=(time,cls,msg)=>{
+    const el=document.createElement('div');
+    el.className='log-line';
+    el.innerHTML=`<span class="log-time">${time}</span><span class="${cls}">${msg}</span>`;
+    logEl.appendChild(el);
+    logEl.scrollTop=logEl.scrollHeight;
+  };
+
+  const addTime=(base,secs)=>{
+    const d=new Date(`2024-01-01T${base}`);
+    d.setSeconds(d.getSeconds()+secs);
+    return d.toTimeString().slice(0,8);
+  };
+
+  const t0='09:14:02';
+  logEl.innerHTML='';
+
+  let pct=0;
+  const interval=setInterval(()=>{
+    pct=Math.min(pct+2,100);
+    document.getElementById('runFill').style.width=pct+'%';
+    document.getElementById('runPct').textContent=pct+'%';
+  },60);
+
+  const steps=[
+    {delay:200,step:'ingest',logCls:'log-ok',logMsg:`[INGEST] ${d.rows.toLocaleString()} rows loaded · ${d.cols.length} columns`,status:'Loaded '+d.rows.toLocaleString()+' rows'},
+    {delay:700,step:'profile',logCls:'log-ok',logMsg:'[PROFILE] Column types inferred · 0 schema errors',status:'Profiling columns...'},
+    {delay:1300,step:'detect',logCls:'log-warn',logMsg:`[DETECT] ${totalIssues} issues found across ${d.issues.length} types`,status:`Detected ${totalIssues} issues`},
+    {delay:2100,step:'clean',logCls:'log-ok',logMsg:`[CLEAN] ${d.kpis.nulls} nulls filled · ${d.kpis.dupes} dupes removed · formats normalized`,status:'Applying cleaning rules...'},
+    {delay:2900,step:'validate',logCls:'log-ok',logMsg:`[VALIDATE] Quality score: ${d.kpis.score}% · ${d.kpis.cleaned.toLocaleString()} rows passed`,status:'Validating output...'},
+    {delay:3600,step:'report',logCls:'log-info',logMsg:'[REPORT] Automated report generated · scheduled delivery queued',status:'Report generated!'},
+  ];
+
+  let i=0;
+  steps.forEach((s,idx)=>{
+    setTimeout(()=>{
+      stepStates[s.step]='done';
+      if(idx<steps.length-1) stepStates[steps[idx+1].step]='running';
+      document.getElementById('runStatus').textContent=s.status;
+      appendLog(addTime(t0,idx+1),'log-ok',s.logMsg);
+      renderPipeline();
+      if(s.step==='clean'){
+        previewMode='after';
+        togglePreview('after');
+      }
+      if(s.step==='report'){
+        clearInterval(interval);
+        document.getElementById('runFill').style.width='100%';
+        document.getElementById('runPct').textContent='100%';
+        pipelineRunning=false;
+        renderKPIs();
+        appendLog(addTime(t0,7),'log-ok',`Pipeline complete · runtime: ${d.kpis.time}`);
+      }
+    },s.delay);
+  });
+}
+
+setTimeout(renderAll,80);
+</script>
